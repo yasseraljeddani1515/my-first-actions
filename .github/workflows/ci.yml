@@ -85,6 +85,19 @@ jobs:
           (cd "$GITHUB_WORKSPACE" && zip -r "$ZIP_NAME" "deployment-package")
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
 
+
+          - name: Rename JAR with version
+  run: |
+    cp target/ecommerce-app-1.0-SNAPSHOT.jar target/ecommerce-app-${{ steps.version.outputs.version }}.jar
+
+- name: Upload JAR as artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: ecommerce-app-${{ steps.version.outputs.version }}
+    path: target/ecommerce-app-${{ steps.version.outputs.version }}.jar
+    retention-days: 30
+
+
       - name: Upload deployment package artifact
         uses: actions/upload-artifact@v4
         with:
