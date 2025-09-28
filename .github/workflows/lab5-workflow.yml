@@ -2,7 +2,6 @@ name: Continuous Integration Pipeline with SonarQube
 
 on: workflow_dispatch
 
-# Define permissions for the workflow
 permissions:
   contents: read
   actions: read
@@ -32,15 +31,18 @@ jobs:
         run: |
           npm run build 2>/dev/null || echo "No build script found, skipping build step"
 
+      # --- Run Jest tests and generate JUnit report ---
       - name: Install jest-junit
         run: npm i --save-dev jest-junit
+
       - name: Run unit tests with coverage and JUnit reports
         run: |
+          mkdir -p coverage
           JEST_JUNIT_OUTPUT_DIR=coverage \
           JEST_JUNIT_OUTPUT_NAME=junit.xml \
-          npm run test:coverage -- --reporters=jest-junit
+          npm run test:coverage -- --reporters=default --reporters=jest-junit
 
-      - name: Publish test results to Checks
+      - name: Publish test results to GitHub Checks
         uses: dorny/test-reporter@v1
         if: always()
         with:
@@ -49,7 +51,7 @@ jobs:
           reporter: jest-junit
           fail-on-error: true
 
-      - name: Upload test results to GitHub
+      - name: Upload test results artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,6 +59,7 @@ jobs:
           path: coverage/
           retention-days: 30
 
+      # --- SonarQube Scan ---
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
@@ -74,6 +77,7 @@ jobs:
             -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
             -Dsonar.coverage.exclusions=node_modules/**,coverage/**,tests/**,**/*.test.js,**/*.spec.js
 
+      # --- Create Deployment Package ---
       - name: Create deployment package
         run: |
           set -euo pipefail
